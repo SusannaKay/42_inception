@@ -326,5 +326,154 @@ client -> server-> dati
 Chrome → Nginx → file HTML
 FileZilla → FTP Server → filesystem
 Adminer → MariaDB → database
----
 
+## Docker-compose.YAML
+Serve a dire come devono essere collegati e avviati i container
+
+es:
+
+services:
+
+  mariadb:
+    image: mariadb:11
+    volumes:
+      - db_data:/var/lib/mysql
+
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+
+volumes:
+  db_data:
+
+services: 
+tutto ciò che sta sotto sono i servizi che compongono l'applicazione
+mariadb:
+nome logico del servizio 
+image:
+crea l'immagine a partire da mariadb vers. 11
+volumes:
+      - db_data:/var/lib/mysql
+questa riga significa che il volume Docker db_data viene montato dentro al container, punto di mount /var/lib/mysql
+quindi il volume non vive in quel path, è semplicemente montato li 
+
+se il volume non esiste, lo crea
+poi crea il container
+poi collega il volume
+mariaDB inizia a scrivere in /var/lib/ecc, docker lo intercetta e scrive dove effettivamente è storato in db ovvero nel computer host ( in una cartella di docker )
+
+Host
+│
+├── Docker
+│     │
+│     └── Volume db_data
+│
+└── Container MariaDB
+      │
+      └── /var/lib/mysql
+
+Supponiamo di avere qualcosa tipo:
+
+services:
+
+  wordpress:
+    image: wordpress
+    volumes:
+      - wordpress_data:/var/www/html
+
+  ftp:
+    image: vsftpd
+    volumes:
+      - wordpress_data:/home/ftp
+
+in questo caso il volume è lo stesso, cambia solo il punto di mount ( la "porta" da cui si ha accesso a quel volume ). Essendo ogni processo isolato, quei path sono solo il punto in cui il volume appare dentro al container.
+Quando parte,  docker dice al kernel "monta questa cartella in questo punto dentro a questo container" fine. Ovviamente i servizi non sanno nulla di docker, "pensano" di scrivere nel loro filesystem, ma in realtà docker intercetta tutto.
+
+### Named Volume vs Bind Mount
+
+volumes:
+  - db_data:/var/lib/mysql
+
+db_data è un volume gestito da Docker. QUesto è Named Volume 
+
+volumes:
+  - ./my_project:/app
+questa è una cartella sull'host montata nel container /app. Questo è Bind Mount. Ovviamente tutte le modifiche nella cartella si riflettono nel container 
+
+Quando usare uno o l'altro? 
+tendenzialmente la domanda che devo farmi è: questi sono miei dati o dati dell'app? 
+per miei dati, ad esempio potrei riferirmi a del codice
+dati dell'app, quelli generati dall'app stessa e lo gestisce docker per me
+
+I named volumes servono per separare i dati dell'applicazione dal codice dell'applicazione.
+
+## Docker Networks
+
+Una Docker Network è una rete virtuale creata da Docker che permette ai container di comunicare tra loro in modo isolato dal resto del sistema.
+
+Quando due container appartengono alla stessa Docker Network:
+
+possono comunicare direttamente;
+possono risolversi tramite il nome del servizio (postgres, redis, ecc.);
+il traffico rimane interno alla rete Docker e non passa sulla rete fisica del computer.
+
+In pratica Docker crea una LAN privata per i container, isolando di fatto tutti i container dalla rete dell'host.
+
+                 Host
+
+            192.168.1.50
+                  │
+          ┌───────┴────────┐
+          │ Docker Network │
+          └───────┬────────┘
+                  │
+      ┌───────────┼───────────┐
+      ▼           ▼           ▼
+   app        postgres      redis
+172.18.0.2   172.18.0.3   172.18.0.4
+
+
+I container sono come "mini pc" isolati tra loro, quindi non sanno dove si trova, ad esempio, il volume. Ma docker lo sa. QUindi se da dentro il container "app" io dovessi accedere al volume db_data attraverso il container mariadb, io dovrei cercare mariadb, docker sa che, se legge mariadb, deve risolvere il nome e instradare la richiesta verso quel container specifico. Ogni servizio ha un DNS associato ad un nome. Quindi lui sa che mariadb corrisponde ad un indirizzo preciso e fa una specie di redirect verso quell'indirizo. Ecco anche perchè compose usa i nomi dei servizi, li usa come hostname. 
+Come fa app a sapere che c'è "mariadb" a cui fare la richiesta per scrivere dati? tramite un env. Praticamente ogni container ha un env dove sono segnati tutte ste robe 
+
+environment:
+  DB_HOST: mariadb
+  DB_USER: wordpress
+  DB_PASSWORD: password
+
+Vantaggi della Docker Network
+isolamento tra applicazioni;
+nessun conflitto tra porte interne;
+DNS automatico;
+maggiore sicurezza;
+è il comportamento predefinito di Docker.
+
+## Host Network 
+
+La Host Network è una modalità in cui il container non usa una rete virtuale propria.
+
+Invece, utilizza direttamente la rete del computer host.
+
+Questo significa che il container condivide:
+
+gli indirizzi IP;
+le interfacce di rete;
+le porte
+
+con il sistema operativo host.
+
+Non c'è alcun livello di isolamento di rete.
+
+Host
+
+192.168.1.50
+
+├── Next.js
+├── PostgreSQL
+├── Redis
+
+Vantaggi della Host Network
+niente livello di virtualizzazione della rete;
+leggermente meno overhead;
+utile quando un'applicazione deve usare direttamente la rete dell'host.
