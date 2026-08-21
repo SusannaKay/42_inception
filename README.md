@@ -1,5 +1,21 @@
 # 42_inception
 
+## Indice
+
+- [Docker](#docker)
+- [Kernel](#kernel)
+- [Database](#database)
+- [Redis](#redis)
+- [NGINX](#nginx)
+- [WordPress](#wordpress)
+- [Server FTP](#server-ftp)
+- [Adminer](#adminer)
+- [Docker Networks](#docker-networks)
+- [Docker Compose YAML](#docker-compose-yaml)
+- [Dockerfile](#dockerfile)
+- [Docker-compose.yml](#docker-composeyml)
+- [Comandi terminale](#comandi-terminale)
+
 ## Docker
 
 Docker permette di impacchettare un'applicazione insieme a tutto ciò di cui ha bisogno per funzionare.
@@ -366,6 +382,11 @@ Docker
            ▼
     Volume database
 ```
+
+## MariaDB
+
+
+
 
 ## Server FTP
 
@@ -791,6 +812,91 @@ La sezione `services` definisce i container che compongono l'applicazione. Ogni 
 
 ### Networks
 
+Definisce le reti virtuali che collegano i container tra loro. In maniera predefinita, Compose crea una rete privata in cui tutti i container possono comunicare tra loro usando i nomi dei servizi come hostname tramite il DNS interno di Docker.
+
+Se non specifico nulla, Docker crea in automatico una rete di tipo bridge.
+- Tutti i servizi dichiarati nel file vengono inseriti in questa rete comune.
+- Ciascun container puó raggiungere gli altri semplicemente usando il nome del servizio come hostname. 
+
+- `bridge`: driver predefinito per singolo host, crea uno switch virtuale isolato all`interno della macchina. I container comunicano tra loro e possono uscire su internet via NAT. Ma sono invisibili dall-esterno a meno di port-mapping. 
+- `host`: rimuove l`isolamento di rete tra container e host. Il container condivide lo stack di rete dell host.
+
+
+- Custom bridge network: rete bridge personalizzata, creato e gestito dal deamon Docker sull'host. A differenza delle bridget predefinite, offrono controllo, collegamento e scollegamento a runtime senza riavvio, supporto DNS automatico. 
+
+Flusso di comunicazione tra container:
+
+Quando un container si avvia all'interno di una rete, Docker configura il suo file `/etc/resolv.conf` con l'indirizzo IP del DNS interno della rete. 
+
+Se una applicazione tenta di connettersi ad un altro container usando il nome del servizio, l'os del container invia la richiesta per il nome_servizio al DNS interno.
+Il server DNS di DOcker consulta la tabella interna della rete per trovare l'IP corretto e restituisce la risposta al container richiedente.
+
+
+### Volumes
+
+Permette di dichiarare e gestire volumi dedicati per mantenere intatti i dati anhe quando i container vengono distrutti o ricreati. Questo perché i container sono effimeri: quando un container viene fermato o rimosso, tutti i dati scritti sul suo layer di scrittura interno ( il writable layer ) vengono persi. I volumi invece sono persistenti e sopravvivono alla vita del container.
+
+Dichiarazione di un volume:
+
+```yaml
+volumes:
+  db_data:
+    driver: local
+```
+poi referenziato nel servizio:
+
+```yaml
+services:
+  mariadb:
+    image: mariadb:11
+    volumes:
+      - db_data:/var/lib/mysql
+``` 
+Qui `db_data` è un volume Docker che viene montato nel container MariaDB su `/var/lib/mysql`, dove il database salva i suoi dati. Anche se il container MariaDB viene rimosso, i dati rimangono intatti nel volume `db_data`.
+
+- NOME_VOLUME:PERCORSO_INTERNO_AL_CONTAINER
+se il volume non esiste al primo avvio, Docker lo crea automaticamente.
+
+### secrets
+
+I secrets sono un meccanismo per gestire in modo sicuro informazioni sensibili come password, chiavi API o certificati. Invece di includere queste informazioni direttamente nel file docker-compose.yml o nel codice dell'applicazione, i secrets permettono di mantenerle separate e accessibili solo ai container che ne hanno bisogno.
+
+Rendono i dati accessibili come file temporanei all'interno del container. 
+
+A basso livello: 
+
+Quando assegno un secret ad un container, Docker lo monta all'interno del container come file di testo. 
+
+Per impostazione predefinita, i file vengono montati in `/run/secrets/<nome_secret>`. Il contenuto del file è leggibile solo dal processo principale del container, e non è accessibile da altri container o dall'host.
+
+All'interno del container, il percorso /run/secrets/<nome_secret> è montato come un filesystem temporaneo (tmpfs). 
+
+Architettura logica:
+
+si divide in due passaggi: Dichiarazione globale alla radice del file e poi l'assegnazione selettiva al singolo servizio. 
+
+Dichiarazione globale:
+
+```yaml
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+```
+Da file locale (`file`) legge il contenuto da un file presente su host. Questo file non va incluso nella repo ( quindi va aggiunto a .gitignore ).
+
+se usiamo invece `environment` lo prende direttamente dal file docker-compose.yml.
+
+Assegnazione al servizio:
+
+```yaml
+services:
+  mariadb:
+    image: mariadb:11
+    secrets:
+      - db_password
+```
+
+Il file verrá montato in `/run/secrets/db_password` all'interno del container MariaDB. Il processo principale del container può leggere il contenuto di questo file per ottenere la password del database senza esporla nel file docker-compose.yml o nel codice dell'applicazione.
 
 
 ## Comandi terminale
