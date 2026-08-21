@@ -3,15 +3,17 @@
 ## Indice
 
 - [Docker](#docker)
-- [Kernel](#kernel)
 - [Database](#database)
 - [Redis](#redis)
 - [NGINX](#nginx)
 - [WordPress](#wordpress)
+- [MariaDB](#mariadb)
 - [Server FTP](#server-ftp)
 - [Adminer](#adminer)
-- [Docker Networks](#docker-networks)
 - [Docker Compose YAML](#docker-compose-yaml)
+- [Docker Networks](#docker-networks)
+- [Host Network](#host-network)
+- [Immagine vs Container](#immagine-vs-container)
 - [Dockerfile](#dockerfile)
 - [Docker-compose.yml](#docker-composeyml)
 - [Comandi terminale](#comandi-terminale)
@@ -416,7 +418,7 @@ Linux
 
 Docker usa funzionalità del kernel come namespaces e cgroups per far credere a ciascun processo di essere in un ambiente separato.
 
-# Docker non virtualizza un computer. Virtualizza l'ambiente in cui gira un processo.
+Docker non virtualizza un computer. Virtualizza l'ambiente in cui gira un processo.
 
 ## Adminer
 
