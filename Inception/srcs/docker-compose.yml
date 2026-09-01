@@ -1,0 +1,13 @@
+services:
+  mariadb:
+  build: ./srcs/requirements/mariadb
+  container_name: mariadb
+  secrets:
+    - db_root
+    - db_pass
+
+secrets:
+  db_root:
+    file: ./secrets/db_root.txt
+  db_pass:
+    file: ./secrets/db_pass.txt

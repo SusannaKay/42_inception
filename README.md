@@ -387,7 +387,33 @@ Docker
 
 ## MariaDB
 
+é un sistema di gestione db relazionali. Si divide in 3 macro componenti:
 
+Il deamon (mysqld): ascolta sulla porta di rete ( nel nostro caso sará la 3306 ) le richieste di info. In docker, questo sará il pid 1.
+
+Il filesystem ( datadir ): la directory dove vengono salvati i dati di default é /var/lib/mysql. Per il progetto mappo questo path ad una cartella fisica dell host, in modo che i dati persistano dopo lo spegnimento del container. 
+
+Il client (mysql): programma che usiamo per parlare con il deamon. 
+
+Quando avviamo mariadb per la prima volta non c'é nulla: ne db ne ovviamente utenti. Quindi creeremo uno script iniziale che fa da ponte tra l'installazione e la sua configurazione. 
+Quello che fará sará 
+- accendere il deamon temporaneamente
+- usare il client da CLI per dare le istruzioni sql necessarie a creare il db e assegnare le psw lette in secrets
+- spegnere il deamon
+- riavviare passandogli il controllo ( exec )
+
+Quando il processo del db si avvia, la prima cosa che fa é analizzare un file di config per capire come allocare le risorse nell'os e come si deve interfacciare. Questo file si chiama 50-server.cnf e viene creato automaticamente da uno script nel momento in cui installiamo mariadb-server. 
+
+Questo script crea un utente di sistema mysql che esegue solo processi
+crea un gruppo di sistema omonimo
+blocca la shell a questo utente in modo che nessuno potrá mai fare login usando mysql
+
+Nel dockerfile noi andremo a copiare un altro file di config in cui modificheremo la porta di ascolto ( di default é localhost ) ed il bind address che di default sarebbe 127.0.0.1 ( ovvero ascolterebbe solo all'interno del suo container). Impostandolo in 0.0.0.0:3306 gli diciamo sostanzialmente di ascoltare che attraverso la 3306 può ricevere connessioni dalla rete Docker. 
+
+volumi: 
+
+nel config file di maria, scriveremo che la datadir é /var/lib/mysql. In questo modo il deamon salverá i dati in quella cartella *che sta dentro al container*. 
+nel docker-compose invece, gli diremo che si il suo db_volume é in quella directory del container, ma la memorizzazione fisica avverrá in /home/login/data/mariadb ( questa sará la cartella reale persistente )
 
 
 ## Server FTP
