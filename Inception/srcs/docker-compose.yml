@@ -6,6 +6,17 @@ services:
     - db_root
     - db_pass
 
+  wordpress:
+    build: ./srcs/requirements/wordpress
+    container_name: wordpress
+    depends_on:
+      - mariadb
+    ports:
+      - "5050:9000"
+    secrets:
+      - db_root
+      - db_pass
+      
 secrets:
   db_root:
     file: ./secrets/db_root.txt
