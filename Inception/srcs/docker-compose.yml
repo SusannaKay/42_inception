@@ -1,24 +1,63 @@
 services:
   mariadb:
-  build: ./srcs/requirements/mariadb
-  container_name: mariadb
-  secrets:
-    - db_root
-    - db_pass
-
-  wordpress:
-    build: ./srcs/requirements/wordpress
-    container_name: wordpress
-    depends_on:
-      - mariadb
-    ports:
-      - "5050:9000"
+    build: ./requirements/mariadb
+    image: mariadb
+    container_name: mariadb
+    env_file: .env
     secrets:
       - db_root
       - db_pass
-      
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - inception
+    restart: always
+
+  wordpress:
+    build: ./requirements/wordpress
+    image: wordpress
+    container_name: wordpress
+    env_file: .env
+    depends_on:
+      - mariadb
+    secrets:
+      - db_pass
+      - wp_admin_pass
+      - wp_user_pass
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - inception
+    restart: always
+
+  # nginx: da aggiungere quando il suo Dockerfile sarà pronto.
+  # Sarà l'unico servizio con "ports" (443:443) e monterà
+  # anche lui wordpress_data su /var/www/html.
+
 secrets:
   db_root:
-    file: ./secrets/db_root.txt
+    file: ../secrets/db_root.txt
   db_pass:
-    file: ./secrets/db_pass.txt
+    file: ../secrets/db_pass.txt
+  wp_admin_pass:
+    file: ../secrets/wp_admin.txt
+  wp_user_pass:
+    file: ../secrets/wp_user.txt
+
+volumes:
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/skayed/data/mariadb
+  wordpress_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/skayed/data/wordpress
+
+networks:
+  inception:
+    driver: bridge
