@@ -5,8 +5,7 @@ RUN apt-get update && apt-get install -y mariadb-server && rm -rf /var/lib/apt/l
 COPY conf/50-server.cnf /etc/mysql/mariadb.conf.d/50-server.cnf
 COPY tools/init-db.sh /usr/local/bin/init-db.sh
 
-RUN chmod +x /usr/local/bin/init-db.sh
-
+RUN chmod +x /usr/local/bin/init-db.sh && mkdir -p /run/mysqld && chown -R mysql /run/mysqld
 EXPOSE 3306
 
 ENTRYPOINT ["/usr/local/bin/init-db.sh"]
